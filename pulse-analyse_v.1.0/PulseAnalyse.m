@@ -687,7 +687,7 @@ function quality = assess_signal_quality(s, pulse_inds)
 %
 % Reference: This function uses an adaptation of the signal quality index
 % for the photoplethysmogram described in:
-%     Orphanidou, C. et al., 2015. Signal-quality indices for the electrocardiogram and photoplethysmogram: derivation and applications to wireless monitoring. IEEE Journal of Biomedical and Health Informatics, 19(3), pp.832–8. Available at: http://www.ncbi.nlm.nih.gov/pubmed/25069129.
+%     Orphanidou, C. et al., 2015. Signal-quality indices for the electrocardiogram and photoplethysmogram: derivation and applications to wireless monitoring. IEEE Journal of Biomedical and Health Informatics, 19(3), pp.832Â–8. Available at: http://www.ncbi.nlm.nih.gov/pubmed/25069129.
 
 %% Setup
 s.t = [0:length(s.v)-1]/s.fs;
