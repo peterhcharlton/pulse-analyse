@@ -209,6 +209,7 @@ if strcmp(signal_type, 'ppg')
     % Data from the PPGDiary Pilot Study (a single pulse wave acquired using an infrared PPG sensor on the thumb)
     S.v = [-14880;-14508;-13390;-11384;-8573;-5236;-1745;1569;4502;6979;8992;10536;11600;12196;12396;12328;12123;11860;11547;11160;10700;10218;9789;9458;9211;8990;8742;8465;8206;8016;7894;7778;7573;7223;6747;6239;5814;5554;5478;5556;5744;6010;6339;6720;7137;7561;7961;8309;8580;8760;8840;8825;8732;8580;8384;8151;7884;7595;7306;7042;6817;6629;6460;6286;6093;5874;5630;5364;5077;4771;4453;4132;3822;3534;3273;3041;2828;2622;2410;2187;1967;1771;1617;1501;1391;1243;1029;760;486;269;140;79;28;-69;-231;-425;-599;-716;-784;-847;-949;-1104;-1291;-1475;-1639;-1800;-1993;-2239;-2524;-2798;-3011;-3150;-3256;-3395;-3613;-3898;-4189;-4417;-4562;-4658;-4771;-4942;-5167;-5410;-5645;-5865;-6077;-6270;-6414;-6491;-6521;-6568;-6694;-6911;-7167;-7385;-7519;-7588;-7653;-7778;-7982;-8245;-8523;-8777;-8992;-9169;-9323;-9475;-9648;-9855;-10093;-10344;-10577;-10768;-10908;-11012;-11116;-11267;-11502;-11815;-12151;-12427;-12585;-12644;-12698;-12845;-13082;-13241];
     S.v = [-368;-355;-303;-206;-75;69;202;310;388;439;468;478;471;451;421;385;346;305;266;228;196;170;150;136;127;119;109;96;78;61;47;40;38;39;39;39;44;54;70;86;98;104;104;101;97;91;82;70;55;38;22;7;-5;-13;-19;-27;-38;-51;-63;-70;-73;-74;-79;-92;-108;-120;-126;-124;-123;-128;-142;-160;-176;-184;-187;-188;-191;-198;-207;-215;-221;-227;-235;-248;-265;-282;-296;-303;-304;-306;-316;-334;-352];
+    S.v = repmat(S.v, [10,1]);
     S.v = movmean(S.v, 7);
     S.fs = 100; % in Hz
 elseif strcmp(signal_type, 'pressure')
@@ -2709,7 +2710,7 @@ S_aligned.v(end+1) = S_aligned.v(1);
 
 end
 
-function make_plots(sigs, pulse_no, fid_pts, up, plot_inds)
+function make_plots(sigs, pulse_no, fid_pts, up, plot_inds, tol_samps)
 % make plot of individual beat if needed
 
 %% - setup
@@ -2759,12 +2760,12 @@ if plot_inds && up.options.plot_areas
 end
 
 % plot salient points
-pt_names = {'dia', 'dic', 's'}; %, 'p1pk', 'p2pk'};
+pt_names = {'s', 'dia', 'dic', 'f1', 'f2'}; %, 'p1pk', 'p2pk'};
 hspace0 = 0;
 for pt_no = 1 : length(pt_names)
     
     curr_text = pt_names{pt_no};
-    eval(['curr_pt.el = fid_pts.ind.' pt_names{pt_no} '(pulse_no) - fid_pts.ind.f1(pulse_no)+1;']);
+    eval(['curr_pt.el = fid_pts.ind.' pt_names{pt_no} '(pulse_no) - fid_pts.ind.f1(pulse_no)+1+tol_samps;']);
     
     if isnan(curr_pt.el)
         eval(['sigs.pts.' curr_text ' = curr_pt.el;']);
@@ -2789,18 +2790,21 @@ for pt_no = 1 : length(pt_names)
         case 'dic'
             hspace0 = -0.01;
             vspace0 = -1*vspace0;
-        case {'f1', 'p1','p1in'}
+        case {'p1','p1in'}
             hspace0 = -0.04;
         case 's'
             hspace0 = 0;
+        case {'f1', 'f2'}
+            hspace0 = 0.03;  
+            vspace0 = -0.6*vspace0;          
     end
     
     lab_txt = curr_text;
-    if strcmp(lab_txt, 's')
-        lab_txt = 'sys';
-    end
+    if strcmp(lab_txt, 's'), lab_txt = 'sys'; end
+    if strcmp(lab_txt, 'f1'), lab_txt = 'onset'; end
+    if strcmp(lab_txt, 'f2'), lab_txt = 'end'; end
     
-    text(sigs.t(curr_pt.el)+hspace0, sigs.v(curr_pt.el)+vspace0 , curr_text,'FontSize', ftsize, 'Color', 'r', 'HorizontalAlignment', 'center');
+    text(sigs.t(curr_pt.el)+hspace0, sigs.v(curr_pt.el)+vspace0 , lab_txt,'FontSize', ftsize, 'Color', 'r', 'HorizontalAlignment', 'center');
     eval(['sigs.pts.' curr_text ' = curr_pt.el;']);
 end
 
@@ -2949,7 +2953,7 @@ if ~up.options.plot_pw_only
     for pt_no = 1 : length(pt_names)
         
         curr_text = pt_names{pt_no};
-        eval(['curr_fid_pt = fid_pts.ind.' pt_names{pt_no} '(pulse_no);'])
+        eval(['curr_fid_pt = fid_pts.ind.' pt_names{pt_no} '(pulse_no)+tol_samps;'])
         
         if isnan(curr_fid_pt)
             eval(['sigs.pts.' curr_text ' = nan;']);
@@ -3029,7 +3033,7 @@ if ~up.options.plot_pw_only
     vspace_const = 0.08;
     hspace0 = 0;
     for pt_no = 1 : length(pt_names)
-        eval(['curr_pt.el = fid_pts.ind.' pt_names{pt_no} '(pulse_no) - fid_pts.ind.f1(pulse_no)+1;']);
+        eval(['curr_pt.el = fid_pts.ind.' pt_names{pt_no} '(pulse_no) - fid_pts.ind.f1(pulse_no)+1+tol_samps;']);
         curr_text = pt_names{pt_no};
         if isnan(curr_pt.el)
             eval(['sigs.pts.' curr_text ' = nan;']);
@@ -3105,9 +3109,9 @@ if ~up.options.plot_pw_only
         vspace_const = 0.08;
         hspace0 = 0;
         [~, temp] = max(sigs.third_d);
-        fid_pts.ind.p1pk(pulse_no) = temp;
+        fid_pts.ind.p1pk(pulse_no) = temp + fid_pts.ind.f1(pulse_no) - 1 - tol_samps;
         for pt_no = 1 : length(pt_names)
-            eval(['curr_pt.el = fid_pts.ind.' pt_names{pt_no} '(pulse_no) - fid_pts.ind.f1(pulse_no)+1;']);
+            eval(['curr_pt.el = fid_pts.ind.' pt_names{pt_no} '(pulse_no) - fid_pts.ind.f1(pulse_no)+1+tol_samps;']);
             if isnan(curr_pt.el)
                 continue
             end
@@ -3189,6 +3193,15 @@ subtracted = sig(:) - baseline(:);
 
 end
 
+function subtracted = subtract_baseline_extended(sig, tol_samps)
+
+baseline = linspace(sig(1+tol_samps),sig(end),length(sig)-(tol_samps));
+baseline = interp1(1+tol_samps:length(sig), baseline, 1:length(sig),'linear','extrap');
+
+subtracted = sig(:) - baseline(:); 
+
+end
+
 function [norm, scale_factor] = normalise(sig)
 
 norm = sig - min(sig); 
@@ -3210,7 +3223,7 @@ if ~up.options.do_plot || sum(isnan(fid_pts.ind.a)) == length(fid_pts.ind.a)
 end
 
 % extract data for the first high quality pulse wave
-pulse_no = 1;
+pulse_no = 1; tol_samps = 0;
 if ~up.options.calc_average_pw
     if ~pulses.quality(pulse_no)
         temp = find(pulses.quality(1:end-1) & ~isnan(fid_pts.ind.a), 1);
@@ -3218,11 +3231,27 @@ if ~up.options.calc_average_pw
             pulse_no = temp;
         end
     end
-    curr_els = pulses.onsets(pulse_no):pulses.onsets(pulse_no+1);
-    sigs.v = sigs.curr(curr_els);
+    % added to include a bit before and after the pulse wave
+    if pulse_no > 1
+        tol = 0.06;
+        tol_samps = round(tol*sigs.fs);
+        curr_els = pulses.onsets(pulse_no)-tol_samps:pulses.onsets(pulse_no+1);
+        sigs.v = sigs.curr(curr_els);
+        sigs.v = subtract_baseline_extended(sigs.v, tol_samps);
+        fields = fieldnames(fid_pts.ind);
+        for field_no = 1 : length(fields)
+            curr_field = fields{field_no};
+            %eval(['fid_pts.ind.' curr_field ' = fid_pts.ind.' curr_field '-tol_samps;']);
+        end
+    else
+        curr_els = pulses.onsets(pulse_no):pulses.onsets(pulse_no+1);
+        sigs.v = sigs.curr(curr_els);
+        sigs.v = subtract_baseline(sigs.v);
+    end
 else
     curr_els = pulses.ave.onsets(1):pulses.ave.onsets(2);
     sigs.v = sigs.ave(curr_els);
+    sigs.v = subtract_baseline(sigs.v);
 end
 
 sigs.first_d = sigs.first_d(curr_els);
@@ -3231,7 +3260,6 @@ sigs.third_d = sigs.third_d(curr_els);
 
 % - subtract baseline from this pulse wave, and normalise (if specified)
 if up.options.normalise_pw
-    sigs.v = subtract_baseline(sigs.v);
     [sigs.v, scale_factor] = normalise(sigs.v);
     sigs.first_d = sigs.first_d./scale_factor;
     sigs.second_d = sigs.second_d./scale_factor;
@@ -3239,10 +3267,10 @@ if up.options.normalise_pw
 end
 
 % - Plot fiducial points
-make_plots(sigs, pulse_no, fid_pts, up, 0)
+make_plots(sigs, pulse_no, fid_pts, up, 0, tol_samps)
 
 % - Plot pulse wave indices
-make_plots(sigs, pulse_no, fid_pts, up, 1)
+make_plots(sigs, pulse_no, fid_pts, up, 1, tol_samps)
 
 end
 
